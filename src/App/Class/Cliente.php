@@ -8,7 +8,7 @@ use App\Class\Usuario;
 abstract class Cliente
 {
     private string $uuid;
-    private Usuario $usuario;
+    private ?Usuario $usuario;
     private string $nombre;
     private string $direccion;
     protected bool $abierto;
@@ -20,6 +20,7 @@ abstract class Cliente
         $this->uuid=$uuid;
         $this->telefonos=array();
         $this->abierto=false;
+        $this->usuario=null;
     }
 
     //Setters y Getters
@@ -35,9 +36,14 @@ abstract class Cliente
         return $this;
     }
 
-    public function getUsuario(): Usuario
+    public function getUsuario(): ?Usuario
     {
-        return $this->usuario;
+        if ($this->usuario===null){
+            return null;
+        }else{
+            return $this->usuario;
+        }
+
     }
 
     public function setUsuario(Usuario $usuario): Cliente

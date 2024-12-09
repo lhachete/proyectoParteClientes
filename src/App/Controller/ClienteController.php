@@ -6,11 +6,12 @@ use App\Class\Usuario;
 use App\Class\Telefono;
 use App\Excepcions\DeleteClientException;
 use App\Excepcions\ReadClientException;
-use App\Model\clienteModel;
 use App\Controller\InterfaceController;
 use Respect\Validation\Exceptions\NestedValidationException;
 use Respect\Validation\Validator;
-
+use Ramsey\Uuid\Uuid;
+use App\Class\ClienteModificable;
+use App\Model\ClienteModel;
 include_once "InterfaceController.php";
 
 class ClienteController implements InterfaceController
@@ -23,7 +24,9 @@ class ClienteController implements InterfaceController
     //GET /clients/create
     public function create($api){
         //Aquí mostraríamos el formulario de registro
+        $uuid = Uuid::uuid4();
         include_once DIRECTORIO_VISTAS."/Clients/createClient.php";
+
         echo "Formulario de registro de un cliente";
 
     }
@@ -31,39 +34,51 @@ class ClienteController implements InterfaceController
     //POST /clients
     public function store($api)
     {
-        $errores = '';
+        $errores = [];
+
+        // Generate a random UUID for the user
+        $uuid = Uuid::uuid4()->toString();
+
+        // Convert clientisopen to boolean
+        if (isset($_POST['clientisopen'])) {
+            $_POST['clientisopen'] = $_POST['clientisopen'] === '1';
+        }
+
+        // Add the generated UUID to the request data
+        $_POST['useruuid'] = $uuid;
 
         try {
-            // Validación de los datos del cliente usando Respect\Validation
+            // Validate the input data
             Validator::key('clientname', Validator::stringType()->notEmpty()->length(1, 100))
                 ->key('clientaddress', Validator::optional(Validator::stringType()->length(1, 255)))
                 ->key('clientisopen', Validator::boolType())
-                ->key('clientcost', Validator::numeric()->positive())
-                ->key('useruuid', Validator::stringType()->notEmpty()->length(36, 36))
+                ->key('clientcost', Validator::number()->positive())
+                ->key('useruuid', Validator::uuid()) // Validate the generated UUID
                 ->assert($_POST);
         } catch (NestedValidationException $exception) {
             $errores = $exception->getMessages();
         }
 
-        //Comprobamos si ha habido errores
-        if (is_array($errores)){
-            include_once DIRECTORIO_VISTAS."/Clients/errorClient.php";
-        }else{
-            $cliente=Usuario::crearClienteAPartirDeUnArray($_POST);
+        // Check for validation errors
+        if (!empty($errores)) {
+            include_once DIRECTORIO_VISTAS . "/Clients/errorClient.php";
+            return;
         }
-        //Guardamos el cliente
-        $cliente->save();
 
-        //Creación del cliente
-        if ($api){
+        // Create and save client
+        $cliente = ClienteModificable::crearClienteAPartirDeUnArray($_POST);
+        ClienteModel::guardarCliente($cliente);
+
+        // Respond based on API or web request
+        if ($api) {
             http_response_code(201);
             header('Content-Type: application/json');
             echo json_encode($cliente);
-        }else{
-            $informacion=['Se ha creado el usuario correctamente'];
-            $_SESSION['clientname']=$cliente->getNombre();
-            $_SESSION['clientuuid']=$cliente->getUuid();
-            include_once DIRECTORIO_VISTAS."informacion.php";
+        } else {
+            $informacion = ['Se ha creado el usuario correctamente'];
+            $_SESSION['clientname'] = $cliente->getNombre();
+            $_SESSION['clientuuid'] = $cliente->getUuid();
+            include_once DIRECTORIO_VISTAS . "informacion.php";
         }
     }
 

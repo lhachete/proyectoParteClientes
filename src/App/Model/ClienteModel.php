@@ -37,31 +37,35 @@ class ClienteModel
                  clientname,
                  clientaddress,
                  clientisopen,
-                 clientcost) values(:clientuuid,
+                 clientcost) values(
                                     :useruuid,
                                     :clientname,
                                     :clientaddress,
                                     :clientisopen,
                                     :clientcost)";
 
-        /* Creación de la consulta Telefono */
-        $sqltelefono= "INSERT INTO phone(phoneprefix,phonenumber,useruuid)
-                        VALUES (:prefijo,:numero,:uuid_usuario)";
+
 
         $sentenciaPreparada= $conexion->prepare($sql);
-        $sentenciaPreparadaTelefono = $conexion->prepare($sqltelefono);
+
+
 
         //Enlazado de parámetros dentro de la consulta
-        $sentenciaPreparada->bindValue("uuid",$cliente->getUuid());
-        $sentenciaPreparada->bindValue("usuario",$cliente->getUsuario()->getUuid());
-        $sentenciaPreparada->bindValue("nombre",$cliente->getNombre());
-        $sentenciaPreparada->bindValue("direccion",$cliente->getDireccion());
-        $sentenciaPreparada->bindValue("abierto",$cliente->isAbierto());
-        $sentenciaPreparada->bindValue("coste",$cliente->getCoste());
+        //$sentenciaPreparada->bindValue("clientuuid", $cliente->getUuid());
+        $sentenciaPreparada->bindValue("useruuid", $cliente->getUsuario()->getUuid());
+        $sentenciaPreparada->bindValue("clientname", $cliente->getNombre());
+        $sentenciaPreparada->bindValue("clientaddress", $cliente->getDireccion());
+        $sentenciaPreparada->bindValue("clientisopen", $cliente->isAbierto());
+        $sentenciaPreparada->bindValue("clientcost", $cliente->getCoste());
+
 
         //Ejecución de la consulta contra la base de datos
         //Necesitamos guardar el usuario antes de guardar el telefono para que la FK funcione
         $sentenciaPreparada->execute();
+        /* Creación de la consulta Telefono */
+        $sqltelefono= "INSERT INTO phone(phoneprefix,phonenumber,useruuid)
+                        VALUES (:prefijo,:numero,:uuid_usuario)";
+        $sentenciaPreparadaTelefono = $conexion->prepare($sqltelefono);
 
         //Realizamos un bucle para guardar todos los telefonos asociados
         foreach ($cliente->getTelefonos() as $telefono){

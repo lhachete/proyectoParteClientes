@@ -7,13 +7,14 @@
 </head>
 <body>
 <h2>Ha ocurrido un error</h2>
-<p>
- <?php
-//    foreach ($errores as $error) {
-//        echo "<p>$error</p>";
-//    }
-//    ?>
-
-</p>
+<ul>
+    <?php if (!empty($errores)): ?>
+        <?php foreach ($errores as $error): ?>
+            <li><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></li>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <li>No se encontraron errores.</li>
+    <?php endif; ?>
+</ul>
 </body>
 </html>
