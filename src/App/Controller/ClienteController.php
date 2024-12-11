@@ -84,43 +84,42 @@ class ClienteController implements InterfaceController
     }
 
 
-    //GET /clients/{id_usuario}/edit
-    public function edit($id,$api){
-        //Comprobar que el cliente exista y cargar los datos
-        $cliente=ClienteModel::leerCliente($id);
-        if (!$cliente){
-            $errores[]="Usuario no encontrado";
-            include_once DIRECTORIO_VISTAS."errores.php";
+    // Método para editar un cliente
+    public function edit($id, $api)
+    {
+        // Comprobar que el cliente exista y cargar los datos
+        try {
+            $cliente = ClienteModel::leerCliente($id);
+            if (!$cliente) {
+                throw new Exception("Cliente no encontrado.");
+            }
+
+            include_once DIRECTORIO_VISTAS . "Clients/editClient.php"; // Vista para editar cliente
+        } catch (Exception $e) {
+            $errores[] = $e->getMessage();
+            include_once DIRECTORIO_VISTAS . "errores.php";
             exit();
-        }else{
-            include_once DIRECTORIO_VISTAS."Clients/editClient.php"; //Revisar
         }
     }
 
-
-    //PUT /clients/{id_usuario}
-    public function update($id,$api){
+// Método para guardar cambios en un cliente
+    public function update($id, $api)
+    {
         // Obtén el cliente actual desde el modelo
         $cliente = ClienteModel::leerCliente($id);
 
         // Leer los datos enviados a través de PUT
         parse_str(file_get_contents("php://input"), $datos_put_para_editar);
 
-        // Filtramos y validamos los datos recibidos
+        // Validar los datos recibidos
         try {
             Validator::key('clientname', Validator::optional(Validator::stringType()->notEmpty()->length(3, 100)), false)
                 ->key('clientaddress', Validator::optional(Validator::stringType()->length(1, 255)), false)
-                ->key('clientisopen', Validator::optional(Validator::boolType()), false)
-                ->key('clientcost', Validator::optional(Validator::numeric()->positive()), false)
-                ->key('clientphones', Validator::optional(Validator::arrayType()), false)
-                ->key('userdata', Validator::optional(Validator::json()), false)
+                ->key('clientisopen', Validator::optional(Validator::number()), false)
+                ->key('clientcost', Validator::optional(Validator::number()->positive()), false)
                 ->assert($datos_put_para_editar);
         } catch (NestedValidationException $exception) {
             $errores = $exception->getMessages();
-        }
-
-        // Manejar errores de validación
-        if (isset($errores) && is_array($errores)) {
             if ($api) {
                 http_response_code(400);
                 header('Content-Type: application/json');
@@ -137,24 +136,33 @@ class ClienteController implements InterfaceController
         $cliente->setDireccion($datos_put_para_editar['clientaddress'] ?? $cliente->getDireccion());
         $cliente->setAbierto($datos_put_para_editar['clientisopen'] ?? $cliente->isAbierto());
         $cliente->setCoste($datos_put_para_editar['clientcost'] ?? $cliente->getCoste());
-        $cliente->setTelefonos($datos_put_para_editar['clientphones'] ?? $cliente->getTelefonos());
 
         // Guardar el cliente actualizado en la base de datos
-        $cliente->save();
+        try {
+            $cliente->edit();
 
-        // Responder a la solicitud
-        if ($api) {
-            http_response_code(200);
-            header('Content-Type: application/json');
-            echo json_encode($cliente);
-        } else {
-            $_SESSION['clientename'] = $cliente->getNombre();
-            $_SESSION['clienteuuid'] = $cliente->getUuid();
-            $informacion = ['Se ha actualizado el cliente correctamente'];
-            include_once DIRECTORIO_VISTAS . "informacion.php";
+            if ($api) {
+                http_response_code(200);
+                header('Content-Type: application/json');
+                echo json_encode($cliente);
+            } else {
+                $_SESSION['clientname'] = $cliente->getNombre();
+                $_SESSION['clientuuid'] = $cliente->getUuid();
+                $informacion = ['Se ha actualizado el cliente correctamente'];
+                include_once DIRECTORIO_VISTAS . "informacion.php";
+            }
+        } catch (Exception $e) {
+            if ($api) {
+                http_response_code(500);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'No se pudo actualizar el cliente.']);
+            } else {
+                $errores[] = $e->getMessage();
+                include_once DIRECTORIO_VISTAS . '/Clients/errorClient.php';
+            }
         }
-
     }
+
 
 
     //GET /clients/{id_usuario}

@@ -4,6 +4,7 @@ namespace App\Class;
 
 
 use App\Class\Usuario;
+use App\Model\ClienteModel;
 
 abstract class Cliente
 {
@@ -117,6 +118,9 @@ abstract class Cliente
 
     abstract function comprobarDisponibilidad():bool;
 
-
+    public function edit():Cliente{
+        ClienteModel::editarCliente($this);
+        return $this;
+    }
 
 }

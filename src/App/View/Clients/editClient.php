@@ -7,31 +7,26 @@
 </head>
 <body>
 <h2>Editar Cliente</h2>
-<form method="post" action="/modificarCliente">
-    <!-- UUID del Cliente -->
-    <input type="hidden" name="clientuuid" value="<?= $cliente->getUuid() ?>">
+<form method="post" action="/clients/<?= htmlspecialchars($cliente->getUuid()) ?>">
+    <label for="clientuuid">UUID del Cliente:</label>
+    <input type="text" id="clientuuid" name="clientuuid" value="<?= htmlspecialchars($cliente->getUuid()) ?>" readonly><br><br>
 
-    <!-- Nombre -->
-    <label for="nombre">Nombre:</label>
-    <input type="text" name="clientname" id="nombre" value="<?= $cliente->getNombre() ?>" required><br>
+    <label for="clientname">Nombre:</label>
+    <input type="text" id="clientname" name="clientname" value="<?= htmlspecialchars($cliente->getNombre()) ?>" required><br><br>
 
-    <!-- Dirección -->
-    <label for="direccion">Dirección:</label>
-    <input type="text" name="clientaddress" id="direccion" value="<?= $cliente->getDireccion() ?>" required><br>
+    <label for="clientaddress">Dirección:</label>
+    <input type="text" id="clientaddress" name="clientaddress" value="<?= htmlspecialchars($cliente->getDireccion()) ?>"><br><br>
 
-    <!-- Coste -->
-    <label for="coste">Coste:</label>
-    <input type="number" name="clientcost" id="coste" step="0.01" value="<?= $cliente->getCoste() ?>" min="0" required><br>
-
-    <!-- Abierto -->
-    <label for="abierto">¿Abierto?:</label>
-    <select name="clientisopen" id="abierto" required>
+    <label for="clientisopen">¿Está Abierto?:</label>
+    <select id="clientisopen" name="clientisopen">
         <option value="1" <?= $cliente->isAbierto() ? 'selected' : '' ?>>Sí</option>
         <option value="0" <?= !$cliente->isAbierto() ? 'selected' : '' ?>>No</option>
-    </select><br>
+    </select><br><br>
 
-    <!-- Botón para guardar -->
-    <input type="submit" value="Guardar Cambios">
+    <label for="clientcost">Costo:</label>
+    <input type="number" id="clientcost" name="clientcost" value="<?= htmlspecialchars($cliente->getCoste()) ?>" step="0.01" required><br><br>
+
+    <button type="submit">Guardar Cambios</button>
 </form>
 </body>
 </html>

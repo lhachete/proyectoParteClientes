@@ -92,32 +92,36 @@ class ClienteModel
         }
     }
 
-    public static function editarCliente(Cliente $cliente):?Cliente{
-
-        //Crear una conexión con la base de datos
+    public static function editarCliente(Cliente $cliente): ?Cliente
+    {
+        // Crear una conexión con la base de datos
         $conexion = ClienteModel::conectarBD();
+
+        // Consulta SQL para actualizar un cliente
         $sql = "UPDATE client SET 
-                 clientuuid=:clientuuid,
-                 useruuid=:useruuid,
-                 clientname=:clientname,
-                 clientaddress=:clientaddress,
-                 clientisopen=:clientisopen,
-                 clientcost=:clientcost";
+                 clientname = :clientname,
+                 clientaddress = :clientaddress,
+                 clientisopen = :clientisopen,
+                 clientcost = :clientcost,
+                 useruuid = :useruuid
+             WHERE clientuuid = :clientuuid";
 
-        $sentenciaPreparada=$conexion->prepare($sql);
+        $sentenciaPreparada = $conexion->prepare($sql);
 
-        $sentenciaPreparada->bindValue("clientuuid",$cliente->getUuid());
-        $sentenciaPreparada->bindValue("useruuid",$cliente->getUsuario()->getUuid());
-        $sentenciaPreparada->bindValue("clientname",$cliente->getNombre());
-        $sentenciaPreparada->bindValue("clientaddress",$cliente->getDireccion());
-        $sentenciaPreparada->bindValue("clientisopen",$cliente->isAbierto());
-        $sentenciaPreparada->bindValue("clientcost",$cliente->getCoste());
+        // Enlazar valores a los parámetros
+        $sentenciaPreparada->bindValue("clientuuid", $cliente->getUuid());
+        $sentenciaPreparada->bindValue("useruuid", $cliente->getUsuario() ? $cliente->getUsuario()->getUuid() : null);
+        $sentenciaPreparada->bindValue("clientname", $cliente->getNombre());
+        $sentenciaPreparada->bindValue("clientaddress", $cliente->getDireccion());
+        $sentenciaPreparada->bindValue("clientisopen", $cliente->isAbierto(), PDO::PARAM_BOOL);
+        $sentenciaPreparada->bindValue("clientcost", $cliente->getCoste());
 
+        // Ejecutar la consulta y verificar
         $sentenciaPreparada->execute();
 
-        if ($sentenciaPreparada->rowCount()==0){
-            throw new EditClientException();
-        }else{
+        if ($sentenciaPreparada->rowCount() == 0) {
+            throw new Exception("No se pudo actualizar el cliente.");
+        } else {
             return $cliente;
         }
     }
