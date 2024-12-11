@@ -7,6 +7,7 @@ use App\Class\Telefono;
 use App\Excepcions\DeleteClientException;
 use App\Excepcions\ReadClientException;
 use App\Controller\InterfaceController;
+use mysql_xdevapi\Exception;
 use Respect\Validation\Exceptions\NestedValidationException;
 use Respect\Validation\Validator;
 use Ramsey\Uuid\Uuid;
@@ -157,16 +158,34 @@ class ClienteController implements InterfaceController
 
 
     //GET /clients/{id_usuario}
-    public function show($id, $api){
-        //Mostraría los datos de un solo usuario
-        echo "Mostar los datos del cliente $id";
+    public function show($id, $api) {
+        try {
+            // Obtén los datos del cliente desde el modelo
+            $cliente = ClienteModel::leerCliente($id);
+
+            // Carga la vista con los datos del cliente
+            include_once DIRECTORIO_VISTAS . "/Clients/showClient.php";
+        } catch (ReadClientException $e) {
+            // Manejo de errores en caso de que no se encuentre el cliente
+            echo "<h2>Error: No se pudo cargar el cliente.</h2>";
+        }
     }
 
 
+
     //DELETE /clients/{id_usuario}
-    public function destroy($id, $api){
+    public function destroy($id,$api){
         //Borrar los datos de un usuario
-        echo "Función para borrar los datos del cliente $id";
+            ClienteModel::borrarCliente($id);
+            //Si api==false
+            if ($api){
+                http_response_code(200);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    "mensaje"=>"El usuario ha sido borrado correctamente"
+                ]);
+            }
+            return true;
     }
 
 }

@@ -10,7 +10,7 @@ CREATE TABLE client (
                         clientisopen BOOLEAN NOT NULL,
                         clientcost DECIMAL(10,2),
                         useruuid VARCHAR(36),
-                        PRIMARY KEY (clientuuid),
-                        FOREIGN KEY (useruuid) REFERENCES user(useruuid) ON DELETE CASCADE
+                        PRIMARY KEY (clientuuid)
+
 );
 //

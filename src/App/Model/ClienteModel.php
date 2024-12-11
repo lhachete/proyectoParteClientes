@@ -3,13 +3,14 @@
 namespace App\Model;
 
 use App\Class\Cliente;
+use App\Class\ClienteModificable;
 use App\Class\Telefono;
 use App\Excepcions\EditClientException;
 use App\Excepcions\ReadClientException;
 use PDO;
 use PDOException;
 use App\Excepcions\DeleteClientException;
-
+use Ramsey\Uuid\Uuid;
 class ClienteModel
 {
     private static function conectarBD():?PDO{
@@ -26,52 +27,46 @@ class ClienteModel
         return null;
     }
 
-    public static function guardarCliente(Cliente $cliente){
+    public static function guardarCliente(Cliente $cliente)
+    {
 
-        //Crear una conexión con la base de datos
+        // Crear una conexión con la base de datos
         $conexion = ClienteModel::conectarBD();
 
-        //Creación de la consulta SQL de los clientes.
-        $sql = "INSERT INTO client(clientuuid,
-                 useruuid,
-                 clientname,
-                 clientaddress,
-                 clientisopen,
-                 clientcost) values(
-                                    :useruuid,
-                                    :clientname,
-                                    :clientaddress,
-                                    :clientisopen,
-                                    :clientcost)";
+        // Verificar que el usuario asociado existe en la tabla `user`
+        $uuidFalsoUsuario = $cliente->getUsuario() ? $cliente->getUsuario()->getUuid() : null;
 
+//        if (!$uuidFalsoUsuario) {
+//            throw new Exception("El usuario asociado al cliente no existe.");
+//        }
 
+        // Creación de la consulta SQL de los clientes
+        $sql = "INSERT INTO client(clientuuid, useruuid, clientname, clientaddress, clientisopen, clientcost) 
+            VALUES (:clientuuid, :useruuid, :clientname, :clientaddress, :clientisopen, :clientcost)";
 
-        $sentenciaPreparada= $conexion->prepare($sql);
+        $sentenciaPreparada = $conexion->prepare($sql);
 
-
-
-        //Enlazado de parámetros dentro de la consulta
-        //$sentenciaPreparada->bindValue("clientuuid", $cliente->getUuid());
-        $sentenciaPreparada->bindValue("useruuid", $cliente->getUsuario()->getUuid());
+        // Enlazado de parámetros dentro de la consulta
+        $sentenciaPreparada->bindValue("clientuuid", $cliente->getUuid());
+        $sentenciaPreparada->bindValue("useruuid", $uuidFalsoUsuario);
         $sentenciaPreparada->bindValue("clientname", $cliente->getNombre());
         $sentenciaPreparada->bindValue("clientaddress", $cliente->getDireccion());
         $sentenciaPreparada->bindValue("clientisopen", $cliente->isAbierto());
         $sentenciaPreparada->bindValue("clientcost", $cliente->getCoste());
 
-
-        //Ejecución de la consulta contra la base de datos
-        //Necesitamos guardar el usuario antes de guardar el telefono para que la FK funcione
+        // Ejecución de la consulta contra la base de datos
         $sentenciaPreparada->execute();
-        /* Creación de la consulta Telefono */
-        $sqltelefono= "INSERT INTO phone(phoneprefix,phonenumber,useruuid)
-                        VALUES (:prefijo,:numero,:uuid_usuario)";
-        $sentenciaPreparadaTelefono = $conexion->prepare($sqltelefono);
 
-        //Realizamos un bucle para guardar todos los telefonos asociados
-        foreach ($cliente->getTelefonos() as $telefono){
-            $sentenciaPreparadaTelefono->bindValue("prefijo",$telefono->getPrefijo());
-            $sentenciaPreparadaTelefono->bindValue("numero",$telefono->getNumero());
-            $sentenciaPreparadaTelefono->bindValue("uuid_usuario",$cliente->getUuid());
+        /* Creación de la consulta Telefono */
+        $sqlTelefono = "INSERT INTO phone(phoneprefix, phonenumber, useruuid) 
+                    VALUES (:prefijo, :numero, :uuid_usuario)";
+        $sentenciaPreparadaTelefono = $conexion->prepare($sqlTelefono);
+
+        // Realizamos un bucle para guardar todos los teléfonos asociados
+        foreach ($cliente->getTelefonos() as $telefono) {
+            $sentenciaPreparadaTelefono->bindValue("prefijo", $telefono->getPrefijo());
+            $sentenciaPreparadaTelefono->bindValue("numero", $telefono->getNumero());
+            $sentenciaPreparadaTelefono->bindValue("uuid_usuario", $uuidFalsoUsuario);
             $sentenciaPreparadaTelefono->execute();
         }
     }
@@ -81,7 +76,7 @@ class ClienteModel
         //Crear una conexión con la base de datos
         $conexion = ClienteModel::conectarBD();
 
-        $sql = "DELETE FROM client WHERE useruuid=?";
+        $sql = "DELETE FROM client WHERE clientuuid = ?";
 
         $sentenciaPreparada = $conexion->prepare($sql);
 
@@ -127,7 +122,7 @@ class ClienteModel
         }
     }
 
-    public static function leerUsuario($uuidCliente):?Cliente{
+    public static function leerCliente($uuidCliente):?Cliente{
 
         //Crear una conexión con la base de datos
         $conexion = ClienteModel::conectarBD();
@@ -138,13 +133,13 @@ class ClienteModel
                     clientaddress,
                     clientisopen,
                     clientcost,
-                    useruuid FROM client where clientuuid=:clientuuid";
+                    useruuid FROM client where clientuuid = :clientuuid";
 
         //Preparar la sentencia a ejecutar
         $sentenciaPreparada=$conexion->prepare($sql);
 
         //Hacer la asignación de los parametros de la SQL al valor
-        $sentenciaPreparada->bindValue('uuid',$uuidCliente);
+        $sentenciaPreparada->bindValue('clientuuid',$uuidCliente);
 
         //Ejecutar la consulta con los parametros ya cambiados en la base de datos
         $sentenciaPreparada->execute();
@@ -155,19 +150,7 @@ class ClienteModel
         }else{
             //Leer de la base datos un usuario
             $datosCliente = $sentenciaPreparada->fetch(PDO::FETCH_ASSOC);
-
-            //Creamos la consulta necesaria para conseguir los telefonos de la tabla phone
-            $sqlTelefonos = "SELECT phoneprefix,phonenumber FROM phone WHERE useruuid=?"; // <<-- NO ESTOY SEGURO
-            $sentenciaTelefonos = $conexion->prepare($sqlTelefonos);
-            $sentenciaTelefonos->execute([$uuidCliente]);
-            $telefonos=
-                Telefono::crearTelefonosDesdeUnArray(
-                    $sentenciaTelefonos->fetchAll(PDO::FETCH_ASSOC));
-
-
-            $cliente=Cliente::crearClienteAPartirDeUnArray($datosCliente);
-            $cliente->setTelefonos($telefonos);
-            return $cliente;
+            return ClienteModificable::crearClienteAPartirDeUnArray($datosCliente);
 
         }
     }
